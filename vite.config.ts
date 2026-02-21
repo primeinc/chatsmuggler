@@ -1,4 +1,4 @@
-import { copyFile } from "node:fs/promises";
+import { copyFile, readFile, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
@@ -6,24 +6,30 @@ import { defineConfig } from "vite";
 const src = (p: string) => resolve(__dirname, "src", p);
 
 /**
- * Rewrite HTML output paths to strip the "src/" prefix that Vite preserves
- * when input files are under a subdirectory of the project root.
+ * Copy manifest.json from project root to dist/ after every build,
+ * injecting the version from package.json so manifest.version stays in sync
+ * with the release tag.
  *
- * Without this: dist/src/popup/index.html (wrong — manifest references popup/index.html)
- * With this:    dist/popup/index.html      (correct)
- */
-/**
- * Copy manifest.json from project root to dist/ after every build.
- * The manifest is the security contract — it must ship with the extension.
+ * Without this: manifest.json version is hand-edited, easy to desync.
+ * With this:    version comes from package.json version — single source of truth.
  */
 function copyManifest(): Plugin {
   return {
     name: "chatsmuggler:copy-manifest",
     enforce: "post",
     async closeBundle() {
-      await copyFile(
-        resolve(__dirname, "manifest.json"),
+      // Read version from package.json
+      const pkg = JSON.parse(await readFile(resolve(__dirname, "package.json"), "utf-8"));
+      const version = pkg.version;
+
+      // Read and patch manifest.json
+      const manifest = JSON.parse(await readFile(resolve(__dirname, "manifest.json"), "utf-8"));
+      manifest.version = version;
+
+      // Write to dist/
+      await writeFile(
         resolve(__dirname, "dist", "manifest.json"),
+        JSON.stringify(manifest, null, 2) + "\n",
       );
     },
   };

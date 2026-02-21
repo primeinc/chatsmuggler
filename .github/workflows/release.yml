@@ -1,0 +1,53 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+
+      - name: Setup Node
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
+        with:
+          node-version: 22.22.0
+          cache: pnpm
+
+      - name: Setup pnpm
+        run: corepack enable
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint / Typecheck / Test
+        run: |
+          pnpm run lint
+          pnpm run typecheck
+          pnpm run test
+
+      - name: Build (includes attest)
+        run: pnpm run build
+
+      - name: Package dist
+        run: |
+          cd dist
+          zip -r ../chatsmuggler-${GITHUB_REF_NAME}.zip .
+          cd ..
+          sha256sum chatsmuggler-${GITHUB_REF_NAME}.zip > chatsmuggler-${GITHUB_REF_NAME}.zip.sha256
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        with:
+          files: |
+            chatsmuggler-${{ github.ref_name }}.zip
+            chatsmuggler-${{ github.ref_name }}.zip.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
