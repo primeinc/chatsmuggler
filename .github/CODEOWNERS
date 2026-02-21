@@ -1,0 +1,25 @@
+# Security-sensitive files require owner review
+# SDL Practice 6: Require code review for security-critical paths
+
+# Manifest and permissions (any change is security-relevant)
+manifest.json                @primeinc/chatsmuggler-maintainers
+**/manifest*.json            @primeinc/chatsmuggler-maintainers
+
+# Package dependencies (supply chain)
+package.json                 @primeinc/chatsmuggler-maintainers
+package-lock.json            @primeinc/chatsmuggler-maintainers
+
+# CI/CD pipelines
+.github/workflows/           @primeinc/chatsmuggler-maintainers
+.github/CODEOWNERS           @primeinc/chatsmuggler-maintainers
+
+# Security documentation
+SECURITY.md                  @primeinc/chatsmuggler-maintainers
+docs/security/               @primeinc/chatsmuggler-maintainers
+
+# ESLint and TypeScript config (security rules live here)
+eslint.config.*              @primeinc/chatsmuggler-maintainers
+tsconfig*.json               @primeinc/chatsmuggler-maintainers
+
+# Dev container config
+.devcontainer/               @primeinc/chatsmuggler-maintainers

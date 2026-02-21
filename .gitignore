@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+*.crx
+*.xpi
+*.zip
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Reference repos (symlink to ~/dev/refs/browser-extensions)
+/refs
+
+# Test coverage
+coverage/
+
+# Debug
+*.log
+npm-debug.log*

@@ -1,0 +1,23 @@
+# SDL Practice 5 / DS-2: Automated dependency vulnerability management
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "primeinc/chatsmuggler-maintainers"
+    labels:
+      - "dependencies"
+      - "security"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "primeinc/chatsmuggler-maintainers"
+    labels:
+      - "ci"
+      - "security"
