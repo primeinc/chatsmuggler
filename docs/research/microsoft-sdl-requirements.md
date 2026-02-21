@@ -94,7 +94,7 @@
 
 | Requirement | Tool / Config | Priority | Notes |
 |---|---|---|---|
-| Threat modeling tool | [Microsoft Threat Modeling Tool](https://www.microsoft.com/download/details.aspx?id=49168) or OWASP Threat Dragon | MANDATORY | Create DFDs with trust boundaries |
+| Threat modeling tool | [Microsoft Threat Modeling Tool](https://aka.ms/threatmodelingtool) or OWASP Threat Dragon | MANDATORY | Create DFDs with trust boundaries. **Note:** The legacy 2016 download (id=49168) reached EOL Oct 2019; use the current tool via `aka.ms/threatmodelingtool`. |
 | Methodology | STRIDE (Spoofing, Tampering, Repudiation, Information Disclosure, DoS, Elevation of Privilege) | MANDATORY | Systematic threat enumeration |
 | Threat tracking | GitHub Issues tagged `threat-model` | MANDATORY | Link mitigations to implementation PRs |
 | Review cadence | On every major feature or permission change | MANDATORY | Required before any new `permissions` in manifest |
@@ -596,7 +596,7 @@ Maps to SDL Practice 7.2. See [Section 7.3](#73-dynamic-analysis-security-testin
 
 | Item | Status | Notes |
 |---|---|---|
-| Use Manifest V3 (not V2) | MANDATORY | V2 is deprecated and less secure |
+| Use Manifest V3 (not V2) | MANDATORY | **V2 support ended mid-2025.** MV2 extensions are disabled by default in Chrome. V3 is the only supported manifest version. See [Chrome MV2 deprecation timeline](https://developer.chrome.com/docs/extensions/develop/migrate/mv2-deprecation-timeline). |
 | Minimal `permissions` array | MANDATORY | Only request what you need |
 | Use `optional_permissions` for non-essential | MANDATORY | User grants on demand |
 | Restrict `host_permissions` | MANDATORY | Narrowest match patterns possible |

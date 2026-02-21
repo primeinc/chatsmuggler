@@ -92,6 +92,7 @@ Additionally:
 - **No `innerHTML`** — use `textContent` or DOM APIs. Enforced by `@microsoft/sdl/no-inner-html`.
 - **No `eval`/`new Function`** — MV3 enforces this; lint catches it too.
 - **No `postMessage(data, '*')`** — always specify target origin.
+- **Manifest V3 only** — MV2 support ended mid-2025; MV2 extensions are disabled by default in Chrome.
 - **Validate all `chrome.runtime.onMessage` inputs** — treat all messages as untrusted.
 - **Minimal permissions** — justify every permission in `docs/security/permissions-justification.md`.
 - **Pin all GitHub Actions to SHA** — never use tags (CVE-2025-30066 precedent).

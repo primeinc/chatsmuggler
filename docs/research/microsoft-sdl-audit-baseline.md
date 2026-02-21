@@ -341,13 +341,13 @@ Microsoft SDL documentation describes what Microsoft does internally. The docume
 
 ### 7.2 MCSB v2 Criticality Labels Are the Closest to "Minimum"
 
-The Microsoft Cloud Security Benchmark v2 (preview) uses criticality labels:
+The Microsoft Cloud Security Benchmark v2 uses criticality labels:
 - "**Must have**" -- We map these to MINIMUM.
 - "**Should have**" -- We map these to RECOMMENDED.
 
 These labels are applied to DS-1 through DS-7. DS-7 (logging/monitoring) is the only "Should have" among the DevOps controls. All others are "Must have."
 
-**Gap:** MCSB v2 is in preview as of February 2026 [Source 2]. Its status may change. We reference it as the most authoritative current source.
+**Status (Feb 2026):** MCSB v2 is now **Generally Available** (production documentation, last updated Feb 1, 2026) [Source 2]. It is the current authoritative source for DevOps security controls.
 
 ### 7.3 DAST Applicability to Browser Extensions
 

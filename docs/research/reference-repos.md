@@ -35,13 +35,14 @@ strictest viable dev environment for ChatSmuggler.
 
 | # | Repo | Stars | Reason |
 |---|---|---:|---|
-| 14 | `PlasmoHQ/plasmo` | 12,864 | The extension framework. Defines modern extension DX. |
+| 14 | `PlasmoHQ/plasmo` | 12,864 | Extension framework. **Maintenance mode as of 2026** -- still usable but no longer actively developed. |
 | 15 | `extension-js/extension.js` | 4,772 | Cross-browser framework. Zero-config approach. |
 | 16 | `crxjs/chrome-extension-tools` | 3,955 | Vite + CRX. HMR for extensions. |
 | 17 | `antfu-collective/vitesse-webext` | 3,355 | Antfu's starter. Legendary strict configs. |
 | 18 | `guocaoyi/create-chrome-ext` | 2,106 | Scaffolding tool. Multi-framework boilerplates. |
 | 19 | `ansh/jiffyreader-public-archive` | 3,984 | Clean modern ext with good DX setup. |
 | 20 | `SeleniumHQ/selenium-ide` | 3,082 | Enterprise-grade CI/CD pipeline. |
+| 20b | `wxt-dev/wxt` | ~growing | **Recommended framework for new extension projects (2025-2026).** Vite-powered, Nuxt-inspired DX, cross-browser. See [wxt.dev](https://wxt.dev/). Not in original 25 clone set but should be evaluated. |
 
 ### Tier 3 — Domain Relevant (AI chat, export, multi-provider)
 

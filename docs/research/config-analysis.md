@@ -98,6 +98,11 @@ Comprehensive analysis of TypeScript, ESLint, Prettier, pre-commit hooks, CI, an
     "allowUnreachableCode": false,
     "allowUnusedLabels": false,
 
+    // Iterator safety (TS 5.6+, Sep 2024). Ensures built-in iterators
+    // return { done: true, value: undefined } with proper typing.
+    // Not widely adopted yet but worth evaluating.
+    // "noStrictBuiltinIteratorReturn": true,
+
     // Module / bundler settings (common)
     "moduleResolution": "bundler",
     "module": "ESNext",
@@ -109,6 +114,8 @@ Comprehensive analysis of TypeScript, ESLint, Prettier, pre-commit hooks, CI, an
     "noEmit": true
   }
 }
+
+> **TypeScript landscape (Feb 2026):** TS 5.8 stable, TS 5.9 released late 2025. New flag `noStrictBuiltinIteratorReturn` (TS 5.6+) is worth evaluating for iterator protocol safety. Recommended target for new projects: `ES2022` (conservative) or `ES2024` (modern, adds `Map.groupBy`, `SharedArrayBuffer` improvements).
 ```
 
 ---
@@ -117,11 +124,13 @@ Comprehensive analysis of TypeScript, ESLint, Prettier, pre-commit hooks, CI, an
 
 ### 2.1 Config Format Adoption
 
+> **CRITICAL (Feb 2026):** ESLint v10.0.0 (released January 16, 2026) **completely removed support for legacy `.eslintrc.*` and `.eslintignore` files.** Flat config (`eslint.config.*`) is now the ONLY supported format. The 11 repos below using legacy config must migrate or stay on ESLint 9.x. See [ESLint v10.0.0 blog post](https://eslint.org/blog/2026/02/eslint-v10.0.0-released/) and [migration guide](https://eslint.org/docs/latest/use/configure/migration-guide).
+
 | Format | Repos | Count |
 |---|---|---|
 | Flat config (`eslint.config.{js,mjs}`) | darkreader, chatgpt-exporter, plasmo, refined-github, scriptcat, vitesse-webext, web-scrobbler, clients, jiffyreader | **9** |
-| Legacy `.eslintrc.{js,cjs}` | Authenticator, chrome-extension-tools, ext-saladict, selenium-ide, tridactyl | **5** |
-| Legacy `.eslintrc.json` | BilibiliSponsorBlock, chatgpt-advanced, chathub, Memex, SponsorBlock, vimium-c | **6** |
+| Legacy `.eslintrc.{js,cjs}` (**DEAD in ESLint 10+**) | Authenticator, chrome-extension-tools, ext-saladict, selenium-ide, tridactyl | **5** |
+| Legacy `.eslintrc.json` (**DEAD in ESLint 10+**) | BilibiliSponsorBlock, chatgpt-advanced, chathub, Memex, SponsorBlock, vimium-c | **6** |
 | No ESLint config | create-chrome-ext, globalSpeed, page-assist, RSSHub-Radar, extension.js (uses Biome) | **5** |
 
 ### 2.2 ESLint Extends/Presets Used
@@ -299,12 +308,13 @@ Comprehensive analysis of TypeScript, ESLint, Prettier, pre-commit hooks, CI, an
 | **rspack** | scriptcat (1) |
 | **Biome** (linter/formatter, not bundler) | extension.js, refined-github (2) |
 
-**Trends:**
+**Trends (updated Feb 2026):**
 - webpack remains the most common (legacy dominance in browser extensions)
-- vite is the clear modern choice for new projects
+- Vite is the clear modern choice for new projects (now at v7.3.1; v6.0 introduced Environment API, v7.0 updated default browser targets)
 - esbuild commonly used as a transformer within other tools
-- wxt gaining traction as a browser-extension-specific framework
-- Biome emerging as an ESLint/Prettier alternative
+- **WXT is now the recommended browser extension framework for new projects (2025-2026).** Combines Vite speed with Nuxt-inspired DX. Actively maintained, growing community. See [wxt.dev](https://wxt.dev/)
+- **Plasmo has entered maintenance mode** with minimal active development as of 2026. Still usable but no longer the default recommendation for new projects.
+- Biome emerging as an ESLint/Prettier alternative (used by extension.js and refined-github, but Prettier remains the ecosystem standard)
 
 ---
 
@@ -594,6 +604,10 @@ pnpm run test
 - `--cache` flags make it fast for incremental commits
 - `--fix` auto-fixes what it can, failing only on unfixable issues
 - Pre-push test run catches test regressions before they hit CI
+
+> **Husky v9 migration (Feb 2026):** Husky v9 changed hook script patterns from v4-v8. The `prepare` script is now just `husky` (no `husky install`). If upgrading from older Husky, check the [Husky migration guide](https://typicode.github.io/husky/). Some repos in our 25-repo set may still be on v4-v8 patterns.
+
+> **lint-staged v16 breaking change (2025):** lint-staged v16.0.0 switched process spawning from `execa` to `nano-spawn`. If using Node.js scripts as lint-staged tasks, you must explicitly run them with `node` (e.g., `node my-script.js` not just `my-script.js`). See [lint-staged v16.0.0 release notes](https://github.com/lint-staged/lint-staged/releases/tag/v16.0.0).
 
 ### 7.5 GitHub Actions CI Workflow
 

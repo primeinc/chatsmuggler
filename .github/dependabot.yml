@@ -21,3 +21,14 @@ updates:
     labels:
       - "ci"
       - "security"
+
+  # Dev container Dockerfile base image digest updates (DC-016)
+  - package-ecosystem: "docker"
+    directory: "/.devcontainer"
+    schedule:
+      interval: "weekly"
+    reviewers:
+      - "primeinc/chatsmuggler-maintainers"
+    labels:
+      - "dependencies"
+      - "devcontainer"
