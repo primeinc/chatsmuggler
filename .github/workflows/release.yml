@@ -7,6 +7,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 
 jobs:
   build-release:
@@ -43,6 +45,11 @@ jobs:
           zip -r ../chatsmuggler-${GITHUB_REF_NAME}.zip .
           cd ..
           sha256sum chatsmuggler-${GITHUB_REF_NAME}.zip > chatsmuggler-${GITHUB_REF_NAME}.zip.sha256
+
+      - name: Attest Build Provenance
+        uses: actions/attest-build-provenance@1c608f13344607ca84e692f4ca22a9f731d1d6a3 # v2
+        with:
+          subject-path: "chatsmuggler-*.zip"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b

@@ -1,0 +1,8 @@
+# Dependency Review Configuration
+# https://github.com/actions/dependency-review-action#configuration-file
+
+fail_on_severity: high
+deny_licenses:
+  - GPL-3.0
+  - AGPL-3.0
+  - LGPL-3.0 # Adding LGPL-3.0 as well for safety

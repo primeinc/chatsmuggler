@@ -35,6 +35,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify Version Sync
+        run: |
+          pnpm run version:sync
+          git diff --exit-code manifest.json
+
       - name: Format check
         run: pnpm run format:check
 
@@ -73,6 +78,5 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@05fe4576374b728f0c523d6a13d64c25081e0803 # v4.8.3
         with:
-          fail-on-severity: high
-          deny-licenses: GPL-2.0, GPL-3.0, AGPL-3.0
+          config-file: .github/dependency-review-config.yml
           comment-summary-in-pr: always
