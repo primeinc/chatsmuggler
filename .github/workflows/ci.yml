@@ -60,10 +60,7 @@ jobs:
     name: Dependency Review
     runs-on: ubuntu-latest
     # Only runs on PRs — needs pull_request event for the diff.
-    # continue-on-error: requires GitHub Advanced Security (GHAS) to be
-    # enabled on the repo. Free for public repos; paid for private.
-    # Set to false once GHAS is enabled at Settings > Security & Analysis.
-    continue-on-error: true
+    # Requires GitHub Advanced Security (GHAS) — enabled on this repo.
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
