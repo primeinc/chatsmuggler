@@ -61,7 +61,7 @@ npm run audit             # npm audit --audit-level=high
 
 ## TypeScript Config (Strict AF)
 
-Derived from analysis of 25 reference repos. We enable flags that 0/25 repos use:
+Derived from analysis of 25 reference repos. We enable flags that 0/25 repos effectively use (see `docs/research/config-analysis.md` Sections 1.2 and 8.2):
 
 - `strict: true` (umbrella for all strict flags)
 - `noUncheckedIndexedAccess: true` — array/object index returns `T | undefined`
