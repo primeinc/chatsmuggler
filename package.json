@@ -1,6 +1,6 @@
 {
   "name": "chatsmuggler",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Export conversations from ChatGPT, Gemini, Grok, Claude, and DeepSeek.",
   "private": true,
   "license": "MIT",
