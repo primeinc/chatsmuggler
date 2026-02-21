@@ -46,6 +46,11 @@ export type Iso8601String = string & { readonly __brand: "Iso8601String" };
  */
 export function toIso8601(value: Date | number): Iso8601String {
   const d = typeof value === "number" ? new Date(value) : value;
+  if (isNaN(d.getTime())) {
+    throw new TypeError(
+      `toIso8601: invalid date value ${String(value)} — cannot construct Iso8601String from NaN`,
+    );
+  }
   return d.toISOString() as Iso8601String;
 }
 

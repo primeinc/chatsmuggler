@@ -103,6 +103,33 @@ export default tseslint.config(
     },
   },
 
+  // Test files: typed rules via tsconfig.test.json (includes vitest + chrome types)
+  {
+    files: ["src/**/*.test.ts", "src/**/*.spec.ts"],
+    extends: [tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked],
+    languageOptions: {
+      parserOptions: {
+        project: "./tsconfig.test.json",
+        tsconfigRootDir: import.meta.dirname,
+      },
+    },
+    plugins: {
+      "@microsoft/sdl": sdl,
+      "no-secrets": noSecrets,
+    },
+    rules: {
+      "@microsoft/sdl/no-postmessage-star-origin": "error",
+      "no-secrets/no-secrets": ["warn", { tolerance: 4.2 }],
+      "@typescript-eslint/no-explicit-any": "error",
+      "@typescript-eslint/no-floating-promises": "error",
+      "@typescript-eslint/no-misused-promises": "error",
+      "@typescript-eslint/consistent-type-imports": [
+        "error",
+        { prefer: "type-imports", fixStyle: "inline-type-imports" },
+      ],
+    },
+  },
+
   // Prettier must be last — disables all formatting rules that conflict
   prettier,
 );

@@ -1,4 +1,4 @@
-import type { Adapter, Conversation } from "../common/types.ts";
+import type { Adapter, Conversation } from "../common/types";
 
 export const adapter: Adapter = {
   platform: "deepseek",

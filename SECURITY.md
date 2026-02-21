@@ -3,7 +3,7 @@
 ## Supported Versions
 
 | Version | Supported |
-|---------|-----------|
+| ------- | --------- |
 | latest  | Yes       |
 
 ## Reporting a Vulnerability
@@ -29,16 +29,17 @@ Please report security vulnerabilities via [GitHub Security Advisories](https://
 
 ## Security Bug Bar
 
-| Severity | Definition | SLA |
-|----------|-----------|-----|
-| Critical | XSS, CSP bypass, credential leak, RCE | 1 day |
-| High | Permission escalation, data exfiltration, supply chain | 7 days |
-| Medium | Information disclosure, insecure defaults | 30 days |
-| Low | Defense-in-depth improvement | Next release |
+| Severity | Definition                                             | SLA          |
+| -------- | ------------------------------------------------------ | ------------ |
+| Critical | XSS, CSP bypass, credential leak, RCE                  | 1 day        |
+| High     | Permission escalation, data exfiltration, supply chain | 7 days       |
+| Medium   | Information disclosure, insecure defaults              | 30 days      |
+| Low      | Defense-in-depth improvement                           | Next release |
 
 ## Scope
 
 The following are in scope for security reports:
+
 - The browser extension itself (content scripts, background service worker, popup, options)
 - Build pipeline and CI/CD configuration
 - Dependencies and supply chain

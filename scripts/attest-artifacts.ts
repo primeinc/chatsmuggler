@@ -56,7 +56,7 @@ const BANNED_JS_PATTERNS: { id: string; re: RegExp; why: string }[] = [
   },
   {
     id: "POSTMESSAGE_STAR",
-    re: /\.postMessage\s*\([^,)]+,\s*["']\*["']/,
+    re: /\.postMessage\s*\([^)]*,\s*["']\*["']/,
     why: "postMessage with '*' origin broadcasts to all frames — SDL no-postmessage-star-origin violation",
   },
 ];
