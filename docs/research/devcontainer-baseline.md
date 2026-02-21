@@ -39,26 +39,26 @@
 
 ## 2. Requirements Table (Core Deliverable)
 
-| ID | Area | Requirement | Priority | Rationale | Implementation Options | Enforcement Mechanism | Evidence Artifact(s) | Source | Notes |
-|---|---|---|---|---|---|---|---|---|---|
-| DC-001 | Spec | The repo SHALL contain a `.devcontainer/devcontainer.json` file that validates against the dev container JSON schema. | MINIMUM | The spec requires a valid devcontainer.json for any compliant implementation. | Local: VS Code validates on open. Codespaces: GitHub validates on creation. | CI: `devcontainer-cli` or JSON schema lint in PR check. | `.devcontainer/devcontainer.json` in repo. | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20) | Three valid locations: `.devcontainer/devcontainer.json`, `.devcontainer.json`, or `.devcontainer/<folder>/devcontainer.json`. Prefer `.devcontainer/devcontainer.json`. |
-| DC-002 | Repro | The Dockerfile SHALL pin the base image by digest (`image@sha256:...`), not by mutable tag alone. | MINIMUM | Tags are mutable; digests are content-addressable and immutable, guaranteeing reproducible builds. | Both local and Codespaces use the same Dockerfile. | CI: grep/regex check for `@sha256:` in Dockerfile. Renovate/Dependabot for digest updates. | Dockerfile with digest-pinned FROM line. | [Chainguard digest guide](https://edu.chainguard.dev/chainguard/chainguard-images/how-to-use/container-image-digests/) (2026-02-20); [Craig Andrews](https://candrews.integralblue.com/2023/09/always-use-docker-image-digests/) | A human-readable tag comment SHOULD accompany the digest for readability (e.g., `# node:22-bookworm-slim`). |
-| DC-003 | Security | The devcontainer SHALL run processes as a non-root user with UID 1000 via `remoteUser`. | MINIMUM | Running as root in development normalizes insecure defaults and allows trivial privilege escalation. | Set `"remoteUser": "node"` in devcontainer.json. Dockerfile creates user if base image lacks one. | CI: parse devcontainer.json, assert `remoteUser` is not `root` and is present. | devcontainer.json `remoteUser` field. | [VS Code non-root user docs](https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user) (2026-02-20); [Codespaces security](https://docs.github.com/en/codespaces/reference/security-in-github-codespaces) | Node.js official images include a `node` user (UID 1000) by default. |
-| DC-004 | Security | The devcontainer.json SHALL set `"privileged": false` explicitly. | MINIMUM | The spec defaults to false, but explicit declaration prevents accidental override by feature merge (union: true if any source sets true). | Same for local and Codespaces. | CI: parse JSON, assert field is `false`. | devcontainer.json `privileged` field. | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20) | Spec merge rule: `privileged` is union -- true wins if any source sets it. Explicit false documents intent. |
-| DC-005 | Security | The devcontainer SHALL NOT add Linux capabilities via `capAdd` unless documented and approved. | MINIMUM | Each capability expands the kernel attack surface; default should be zero added capabilities. | Same for local and Codespaces. | CI: assert `capAdd` is `[]` or absent. Exception requires PR approval + comment. | devcontainer.json `capAdd` field. | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20); [Red Guild analysis](https://blog.theredguild.org/where-do-you-run-your-code-part-ii-2/) | `SYS_PTRACE` is commonly requested for debugging; require justification. |
-| DC-006 | Security | No secrets, tokens, or credentials SHALL be stored in devcontainer.json, Dockerfile, or any version-controlled devcontainer file. | MINIMUM | Secrets in source control are a critical supply chain risk; Codespaces provides a secrets API for this purpose. | Local: use `.env` files (gitignored). Codespaces: use Codespaces Secrets (user/org/repo level). | Pre-commit hook: scan for patterns (API keys, tokens). CI: secret scanning (GitHub Advanced Security or equivalent). | `.gitignore` entries; Codespaces Secrets config. | [Codespaces secrets docs](https://docs.github.com/en/codespaces/managing-your-codespaces/managing-secrets-for-your-codespaces) (2026-02-20) | Codespaces secrets are NOT available during build (Dockerfile); only in lifecycle scripts (`postCreateCommand` and later). |
-| DC-007 | Repro | The `postCreateCommand` SHALL use `npm ci` (not `npm install`) for deterministic dependency installation. | MINIMUM | `npm ci` installs from lockfile exactly, ensuring all contributors get identical dependency trees. | Same for local and Codespaces. | CI: grep `postCreateCommand` in devcontainer.json for `npm ci`. | devcontainer.json `postCreateCommand` field; `package-lock.json` in repo. | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20) | `package-lock.json` MUST be committed. |
-| DC-008 | Ops | The `.devcontainer/` directory SHALL be version-controlled. `.env` files SHALL be listed in `.gitignore`. | MINIMUM | Version control ensures all contributors share the same environment definition; gitignoring .env prevents secret leakage. | Same for local and Codespaces. | CI: verify `.devcontainer/` exists in tree; verify `.gitignore` contains `.env` pattern. | `.devcontainer/` in git; `.gitignore` entries. | [GitHub Codespaces config docs](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration) (2026-02-20) | |
-| DC-009 | Security | Lifecycle scripts SHALL NOT execute arbitrary remote code (no `curl \| bash` from untrusted sources). | MINIMUM | Pipe-to-shell from URLs is un-auditable and subject to MITM or supply chain compromise. | Same for local and Codespaces. | Code review policy; CI: regex scan lifecycle commands for `curl.*\|.*sh` patterns. | devcontainer.json lifecycle script fields. | [Codespaces security](https://docs.github.com/en/codespaces/reference/security-in-github-codespaces) (2026-02-20) | If a remote script is required, vendor it into the repo and checksum-verify. |
-| DC-010 | Repro | Dev container features SHALL be pinned to specific versions, not `latest`. | RECOMMENDED | Unpinned features can introduce breaking changes or vulnerabilities silently. | Same for local and Codespaces. | CI: parse `features` object, verify version specifiers are not `latest` or absent. | devcontainer.json `features` field. | [Dev container features](https://containers.dev/features) (2026-02-20) | Digest pinning for features is not yet supported per [vscode-remote-release#11241](https://github.com/microsoft/vscode-remote-release/issues/11241). Version pinning is current best practice. |
-| DC-011 | Security | The container SHOULD drop all capabilities and prevent privilege escalation via `runArgs`. | RECOMMENDED | Defense-in-depth: even if a process is compromised, it cannot gain additional privileges. | Local: `runArgs` applied directly. Codespaces: `runArgs` support varies; test. | CI: assert `runArgs` contains `--cap-drop=ALL` and `--security-opt=no-new-privileges:true`. | devcontainer.json `runArgs` field. | [Daniel Demmel secured devcontainers](https://www.danieldemmel.me/blog/coding-agents-in-secured-vscode-dev-containers) (2026-02-20); [Red Guild](https://blog.theredguild.org/where-do-you-run-your-code-part-ii-2/) | May conflict with some features (e.g., Docker-in-Docker). Document exceptions. |
-| DC-012 | Repro | A CI check SHALL validate the devcontainer.json against the official JSON schema on every PR. | RECOMMENDED | Prevents malformed configurations from reaching main branch. | GitHub Actions with `devcontainer-cli` or `ajv-cli`. | GitHub Actions workflow. | CI pipeline definition. | [Dev container spec](https://containers.dev/implementors/spec/) (2026-02-20) | `@devcontainers/cli` provides `devcontainer build` and `devcontainer features test`. |
-| DC-013 | Security | Port forwarding visibility SHALL default to `private` in Codespaces. | RECOMMENDED | Public port forwarding exposes services to the internet without authentication (reverts on restart, but risk window exists). | Codespaces-specific; set via `portsAttributes` or org policy. Local: ports are localhost-only by default. | Org policy: restrict public port forwarding. devcontainer.json `portsAttributes`. | devcontainer.json; org settings. | [Codespaces security](https://docs.github.com/en/codespaces/reference/security-in-github-codespaces) (2026-02-20) | Org admins can restrict port visibility at the organization level. |
-| DC-014 | Security | VS Code extensions SHALL be sourced only from the official VS Code Marketplace; no VSIX sideloading without review. | RECOMMENDED | Third-party extensions run with full workspace access; untrusted extensions are a code execution vector. | Configure via `customizations.vscode.extensions` in devcontainer.json using marketplace IDs only. | Code review: verify extension IDs resolve to Marketplace entries. | devcontainer.json `customizations.vscode.extensions` field. | [VS Code dev containers](https://code.visualstudio.com/docs/devcontainers/containers) (2026-02-20) | |
-| DC-015 | Evidence | The devcontainer build SHALL be reproducible: building from the same commit SHALL produce a functionally identical environment. | RECOMMENDED | Reproducibility is the foundation of auditability; "it works on my machine" is a security gap. | Digest-pinned base image + `npm ci` + version-pinned features. | CI: periodic rebuild from main, compare `npm ls` output. | Build logs; `npm ls` snapshot. | [Chainguard digest guide](https://edu.chainguard.dev/chainguard/chainguard-images/how-to-use/container-image-digests/) (2026-02-20) | Perfect bit-for-bit reproducibility is not achievable with apt-get; functional reproducibility is the target. |
-| DC-016 | Ops | An automated tool (Renovate or Dependabot) SHALL be configured to propose digest and version updates for the base image and features. | RECOMMENDED | Pinning without update automation leads to stale, unpatched images. | Renovate supports Dockerfile digest pinning natively. Dependabot supports Docker ecosystem. | Renovate/Dependabot config in repo. | `renovate.json` or `.github/dependabot.yml`. | [Renovate discussion](https://github.com/renovatebot/renovate/discussions/28767) (2026-02-20) | Renovate may have issues with devcontainer feature digest pinning; test configuration. |
-| DC-017 | Security | The `initializeCommand` lifecycle hook SHALL NOT be used to execute privileged operations on the host. | MINIMUM | `initializeCommand` runs on the HOST machine, not in the container; malicious code here compromises the developer's workstation. | Same for local and Codespaces (though Codespaces host is ephemeral). | Code review; CI: if `initializeCommand` is present, flag for manual review. | devcontainer.json `initializeCommand` field. | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20) | Prefer container-scoped hooks (`postCreateCommand`) over host-scoped ones. |
-| DC-018 | Security | Sudo access SHOULD be removed or disabled for the container user at runtime. | RECOMMENDED | Passwordless sudo negates the security benefit of running as non-root; a compromised process can trivially escalate. | Dockerfile: do not install sudo, or remove sudoers entry. | CI: Dockerfile lint for `NOPASSWD` patterns. | Dockerfile. | [Red Guild analysis](https://blog.theredguild.org/where-do-you-run-your-code-part-ii-2/) (2026-02-20) | Trade-off: some developer workflows require sudo (e.g., `apt-get install`). Document if kept, and plan to remove. |
+| ID     | Area     | Requirement                                                                                                                           | Priority    | Rationale                                                                                                                                 | Implementation Options                                                                                    | Enforcement Mechanism                                                                                                | Evidence Artifact(s)                                                      | Source                                                                                                                                                                                                                           | Notes                                                                                                                                                                                          |
+| ------ | -------- | ------------------------------------------------------------------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DC-001 | Spec     | The repo SHALL contain a `.devcontainer/devcontainer.json` file that validates against the dev container JSON schema.                 | MINIMUM     | The spec requires a valid devcontainer.json for any compliant implementation.                                                             | Local: VS Code validates on open. Codespaces: GitHub validates on creation.                               | CI: `devcontainer-cli` or JSON schema lint in PR check.                                                              | `.devcontainer/devcontainer.json` in repo.                                | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20)                                                                                                                                  | Three valid locations: `.devcontainer/devcontainer.json`, `.devcontainer.json`, or `.devcontainer/<folder>/devcontainer.json`. Prefer `.devcontainer/devcontainer.json`.                       |
+| DC-002 | Repro    | The Dockerfile SHALL pin the base image by digest (`image@sha256:...`), not by mutable tag alone.                                     | MINIMUM     | Tags are mutable; digests are content-addressable and immutable, guaranteeing reproducible builds.                                        | Both local and Codespaces use the same Dockerfile.                                                        | CI: grep/regex check for `@sha256:` in Dockerfile. Renovate/Dependabot for digest updates.                           | Dockerfile with digest-pinned FROM line.                                  | [Chainguard digest guide](https://edu.chainguard.dev/chainguard/chainguard-images/how-to-use/container-image-digests/) (2026-02-20); [Craig Andrews](https://candrews.integralblue.com/2023/09/always-use-docker-image-digests/) | A human-readable tag comment SHOULD accompany the digest for readability (e.g., `# node:22-bookworm-slim`).                                                                                    |
+| DC-003 | Security | The devcontainer SHALL run processes as a non-root user with UID 1000 via `remoteUser`.                                               | MINIMUM     | Running as root in development normalizes insecure defaults and allows trivial privilege escalation.                                      | Set `"remoteUser": "node"` in devcontainer.json. Dockerfile creates user if base image lacks one.         | CI: parse devcontainer.json, assert `remoteUser` is not `root` and is present.                                       | devcontainer.json `remoteUser` field.                                     | [VS Code non-root user docs](https://code.visualstudio.com/remote/advancedcontainers/add-nonroot-user) (2026-02-20); [Codespaces security](https://docs.github.com/en/codespaces/reference/security-in-github-codespaces)        | Node.js official images include a `node` user (UID 1000) by default.                                                                                                                           |
+| DC-004 | Security | The devcontainer.json SHALL set `"privileged": false` explicitly.                                                                     | MINIMUM     | The spec defaults to false, but explicit declaration prevents accidental override by feature merge (union: true if any source sets true). | Same for local and Codespaces.                                                                            | CI: parse JSON, assert field is `false`.                                                                             | devcontainer.json `privileged` field.                                     | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20)                                                                                                                                  | Spec merge rule: `privileged` is union -- true wins if any source sets it. Explicit false documents intent.                                                                                    |
+| DC-005 | Security | The devcontainer SHALL NOT add Linux capabilities via `capAdd` unless documented and approved.                                        | MINIMUM     | Each capability expands the kernel attack surface; default should be zero added capabilities.                                             | Same for local and Codespaces.                                                                            | CI: assert `capAdd` is `[]` or absent. Exception requires PR approval + comment.                                     | devcontainer.json `capAdd` field.                                         | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20); [Red Guild analysis](https://blog.theredguild.org/where-do-you-run-your-code-part-ii-2/)                                        | `SYS_PTRACE` is commonly requested for debugging; require justification.                                                                                                                       |
+| DC-006 | Security | No secrets, tokens, or credentials SHALL be stored in devcontainer.json, Dockerfile, or any version-controlled devcontainer file.     | MINIMUM     | Secrets in source control are a critical supply chain risk; Codespaces provides a secrets API for this purpose.                           | Local: use `.env` files (gitignored). Codespaces: use Codespaces Secrets (user/org/repo level).           | Pre-commit hook: scan for patterns (API keys, tokens). CI: secret scanning (GitHub Advanced Security or equivalent). | `.gitignore` entries; Codespaces Secrets config.                          | [Codespaces secrets docs](https://docs.github.com/en/codespaces/managing-your-codespaces/managing-secrets-for-your-codespaces) (2026-02-20)                                                                                      | Codespaces secrets are NOT available during build (Dockerfile); only in lifecycle scripts (`postCreateCommand` and later).                                                                     |
+| DC-007 | Repro    | The `postCreateCommand` SHALL use `npm ci` (not `npm install`) for deterministic dependency installation.                             | MINIMUM     | `npm ci` installs from lockfile exactly, ensuring all contributors get identical dependency trees.                                        | Same for local and Codespaces.                                                                            | CI: grep `postCreateCommand` in devcontainer.json for `npm ci`.                                                      | devcontainer.json `postCreateCommand` field; `package-lock.json` in repo. | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20)                                                                                                                                  | `package-lock.json` MUST be committed.                                                                                                                                                         |
+| DC-008 | Ops      | The `.devcontainer/` directory SHALL be version-controlled. `.env` files SHALL be listed in `.gitignore`.                             | MINIMUM     | Version control ensures all contributors share the same environment definition; gitignoring .env prevents secret leakage.                 | Same for local and Codespaces.                                                                            | CI: verify `.devcontainer/` exists in tree; verify `.gitignore` contains `.env` pattern.                             | `.devcontainer/` in git; `.gitignore` entries.                            | [GitHub Codespaces config docs](https://docs.github.com/en/codespaces/setting-up-your-project-for-codespaces/adding-a-dev-container-configuration) (2026-02-20)                                                                  |                                                                                                                                                                                                |
+| DC-009 | Security | Lifecycle scripts SHALL NOT execute arbitrary remote code (no `curl \| bash` from untrusted sources).                                 | MINIMUM     | Pipe-to-shell from URLs is un-auditable and subject to MITM or supply chain compromise.                                                   | Same for local and Codespaces.                                                                            | Code review policy; CI: regex scan lifecycle commands for `curl.*\|.*sh` patterns.                                   | devcontainer.json lifecycle script fields.                                | [Codespaces security](https://docs.github.com/en/codespaces/reference/security-in-github-codespaces) (2026-02-20)                                                                                                                | If a remote script is required, vendor it into the repo and checksum-verify.                                                                                                                   |
+| DC-010 | Repro    | Dev container features SHALL be pinned to specific versions, not `latest`.                                                            | RECOMMENDED | Unpinned features can introduce breaking changes or vulnerabilities silently.                                                             | Same for local and Codespaces.                                                                            | CI: parse `features` object, verify version specifiers are not `latest` or absent.                                   | devcontainer.json `features` field.                                       | [Dev container features](https://containers.dev/features) (2026-02-20)                                                                                                                                                           | Digest pinning for features is not yet supported per [vscode-remote-release#11241](https://github.com/microsoft/vscode-remote-release/issues/11241). Version pinning is current best practice. |
+| DC-011 | Security | The container SHOULD drop all capabilities and prevent privilege escalation via `runArgs`.                                            | RECOMMENDED | Defense-in-depth: even if a process is compromised, it cannot gain additional privileges.                                                 | Local: `runArgs` applied directly. Codespaces: `runArgs` support varies; test.                            | CI: assert `runArgs` contains `--cap-drop=ALL` and `--security-opt=no-new-privileges:true`.                          | devcontainer.json `runArgs` field.                                        | [Daniel Demmel secured devcontainers](https://www.danieldemmel.me/blog/coding-agents-in-secured-vscode-dev-containers) (2026-02-20); [Red Guild](https://blog.theredguild.org/where-do-you-run-your-code-part-ii-2/)             | May conflict with some features (e.g., Docker-in-Docker). Document exceptions.                                                                                                                 |
+| DC-012 | Repro    | A CI check SHALL validate the devcontainer.json against the official JSON schema on every PR.                                         | RECOMMENDED | Prevents malformed configurations from reaching main branch.                                                                              | GitHub Actions with `devcontainer-cli` or `ajv-cli`.                                                      | GitHub Actions workflow.                                                                                             | CI pipeline definition.                                                   | [Dev container spec](https://containers.dev/implementors/spec/) (2026-02-20)                                                                                                                                                     | `@devcontainers/cli` provides `devcontainer build` and `devcontainer features test`.                                                                                                           |
+| DC-013 | Security | Port forwarding visibility SHALL default to `private` in Codespaces.                                                                  | RECOMMENDED | Public port forwarding exposes services to the internet without authentication (reverts on restart, but risk window exists).              | Codespaces-specific; set via `portsAttributes` or org policy. Local: ports are localhost-only by default. | Org policy: restrict public port forwarding. devcontainer.json `portsAttributes`.                                    | devcontainer.json; org settings.                                          | [Codespaces security](https://docs.github.com/en/codespaces/reference/security-in-github-codespaces) (2026-02-20)                                                                                                                | Org admins can restrict port visibility at the organization level.                                                                                                                             |
+| DC-014 | Security | VS Code extensions SHALL be sourced only from the official VS Code Marketplace; no VSIX sideloading without review.                   | RECOMMENDED | Third-party extensions run with full workspace access; untrusted extensions are a code execution vector.                                  | Configure via `customizations.vscode.extensions` in devcontainer.json using marketplace IDs only.         | Code review: verify extension IDs resolve to Marketplace entries.                                                    | devcontainer.json `customizations.vscode.extensions` field.               | [VS Code dev containers](https://code.visualstudio.com/docs/devcontainers/containers) (2026-02-20)                                                                                                                               |                                                                                                                                                                                                |
+| DC-015 | Evidence | The devcontainer build SHALL be reproducible: building from the same commit SHALL produce a functionally identical environment.       | RECOMMENDED | Reproducibility is the foundation of auditability; "it works on my machine" is a security gap.                                            | Digest-pinned base image + `npm ci` + version-pinned features.                                            | CI: periodic rebuild from main, compare `npm ls` output.                                                             | Build logs; `npm ls` snapshot.                                            | [Chainguard digest guide](https://edu.chainguard.dev/chainguard/chainguard-images/how-to-use/container-image-digests/) (2026-02-20)                                                                                              | Perfect bit-for-bit reproducibility is not achievable with apt-get; functional reproducibility is the target.                                                                                  |
+| DC-016 | Ops      | An automated tool (Renovate or Dependabot) SHALL be configured to propose digest and version updates for the base image and features. | RECOMMENDED | Pinning without update automation leads to stale, unpatched images.                                                                       | Renovate supports Dockerfile digest pinning natively. Dependabot supports Docker ecosystem.               | Renovate/Dependabot config in repo.                                                                                  | `renovate.json` or `.github/dependabot.yml`.                              | [Renovate discussion](https://github.com/renovatebot/renovate/discussions/28767) (2026-02-20)                                                                                                                                    | Renovate may have issues with devcontainer feature digest pinning; test configuration.                                                                                                         |
+| DC-017 | Security | The `initializeCommand` lifecycle hook SHALL NOT be used to execute privileged operations on the host.                                | MINIMUM     | `initializeCommand` runs on the HOST machine, not in the container; malicious code here compromises the developer's workstation.          | Same for local and Codespaces (though Codespaces host is ephemeral).                                      | Code review; CI: if `initializeCommand` is present, flag for manual review.                                          | devcontainer.json `initializeCommand` field.                              | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) (2026-02-20)                                                                                                                                  | Prefer container-scoped hooks (`postCreateCommand`) over host-scoped ones.                                                                                                                     |
+| DC-018 | Security | Sudo access SHOULD be removed or disabled for the container user at runtime.                                                          | RECOMMENDED | Passwordless sudo negates the security benefit of running as non-root; a compromised process can trivially escalate.                      | Dockerfile: do not install sudo, or remove sudoers entry.                                                 | CI: Dockerfile lint for `NOPASSWD` patterns.                                                                         | Dockerfile.                                                               | [Red Guild analysis](https://blog.theredguild.org/where-do-you-run-your-code-part-ii-2/) (2026-02-20)                                                                                                                            | Trade-off: some developer workflows require sudo (e.g., `apt-get install`). Document if kept, and plan to remove.                                                                              |
 
 ---
 
@@ -75,28 +75,31 @@
 
 ### Naming and Folder Conventions
 
-| Rule | Detail | Source |
-|------|--------|--------|
-| Primary location | `.devcontainer/devcontainer.json` | [Dev container spec](https://containers.dev/implementors/spec/) |
-| Dockerfile co-location | `.devcontainer/Dockerfile` referenced via `build.dockerfile` | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) |
-| Multi-config (future) | `.devcontainer/<name>/devcontainer.json` for named configurations | [Dev container spec](https://containers.dev/implementors/spec/) |
-| Script co-location | Helper scripts live in `.devcontainer/` and are executable (`chmod +x`) | Proposed (operational convention) |
+| Rule                   | Detail                                                                  | Source                                                                             |
+| ---------------------- | ----------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Primary location       | `.devcontainer/devcontainer.json`                                       | [Dev container spec](https://containers.dev/implementors/spec/)                    |
+| Dockerfile co-location | `.devcontainer/Dockerfile` referenced via `build.dockerfile`            | [devcontainer.json reference](https://containers.dev/implementors/json_reference/) |
+| Multi-config (future)  | `.devcontainer/<name>/devcontainer.json` for named configurations       | [Dev container spec](https://containers.dev/implementors/spec/)                    |
+| Script co-location     | Helper scripts live in `.devcontainer/` and are executable (`chmod +x`) | Proposed (operational convention)                                                  |
 
 ### Version Control Rules
 
 **MUST be committed:**
+
 - `.devcontainer/devcontainer.json`
 - `.devcontainer/Dockerfile`
 - `.devcontainer/post-create.sh` (and any helper scripts)
 - `package-lock.json`
 
 **MUST NEVER be committed:**
+
 - `.env` files (add `.env*` to `.gitignore`)
 - Private keys, certificates, tokens
 - `.devcontainer/docker-compose.override.yml` (local-only overrides)
 - Any file containing secrets, credentials, or API keys
 
 **`.gitignore` entries required:**
+
 ```gitignore
 # Dev container local overrides
 .env
@@ -111,32 +114,32 @@
 
 ### Required Defaults
 
-| Setting | Required Value | Rationale |
-|---------|---------------|-----------|
-| `remoteUser` | `"node"` (UID 1000) | Non-root execution; Node.js images include this user. |
-| `containerUser` | Not set (inherit from image) | Let `remoteUser` handle user context; avoid double-override confusion. |
-| `privileged` | `false` (explicit) | Prevent kernel-level container escape. |
-| `capAdd` | `[]` or absent | Zero added capabilities by default. |
-| `updateRemoteUserUID` | `true` (default) | Match host UID on Linux to avoid bind mount permission issues. |
-| `overrideCommand` | `true` | Keep container alive for interactive use (default for image-based). |
-| Secrets | Environment variables only | Never in files; use Codespaces Secrets API for cloud. |
-| Extension source | VS Code Marketplace IDs only | No VSIX files, no untrusted registries. |
-| `forwardPorts` | Explicit list only | No wildcard port forwarding. |
-| Port visibility | `private` (default in Codespaces) | Prevent accidental public exposure. |
+| Setting               | Required Value                    | Rationale                                                              |
+| --------------------- | --------------------------------- | ---------------------------------------------------------------------- |
+| `remoteUser`          | `"node"` (UID 1000)               | Non-root execution; Node.js images include this user.                  |
+| `containerUser`       | Not set (inherit from image)      | Let `remoteUser` handle user context; avoid double-override confusion. |
+| `privileged`          | `false` (explicit)                | Prevent kernel-level container escape.                                 |
+| `capAdd`              | `[]` or absent                    | Zero added capabilities by default.                                    |
+| `updateRemoteUserUID` | `true` (default)                  | Match host UID on Linux to avoid bind mount permission issues.         |
+| `overrideCommand`     | `true`                            | Keep container alive for interactive use (default for image-based).    |
+| Secrets               | Environment variables only        | Never in files; use Codespaces Secrets API for cloud.                  |
+| Extension source      | VS Code Marketplace IDs only      | No VSIX files, no untrusted registries.                                |
+| `forwardPorts`        | Explicit list only                | No wildcard port forwarding.                                           |
+| Port visibility       | `private` (default in Codespaces) | Prevent accidental public exposure.                                    |
 
 ### Explicit "Not Allowed" List
 
-| Prohibited Configuration | Risk | Exception Process |
-|-------------------------|------|-------------------|
-| `"privileged": true` | Full host kernel access; container escape trivial | Requires security review + written justification in PR. Must be time-boxed. |
-| `capAdd` with `SYS_ADMIN`, `NET_ADMIN`, `NET_RAW` | Kernel-level capabilities enable escape, network sniffing | Requires security review + written justification. |
-| `securityOpt: ["seccomp=unconfined"]` | Disables syscall filtering entirely | Not permitted. No exceptions without CISO approval. |
-| `initializeCommand` with network calls | Host-side code execution with developer credentials | Requires security review. Prefer container-scoped commands. |
-| `mounts` to sensitive host paths (`/`, `/etc`, `~/.ssh`, `~/.aws`, `~/.gnupg`) | Direct access to host secrets and configuration | Not permitted. Mount only project-specific paths. |
-| Secrets in `containerEnv` or `remoteEnv` literals | Credentials in version control | Not permitted. Use Codespaces Secrets or `.env` (gitignored). |
-| `curl \| bash` in lifecycle scripts | Un-auditable remote code execution | Vendor scripts into repo; verify checksums. |
-| `runArgs: ["--network=host"]` | Bypasses container network isolation | Not permitted without security review. |
-| Docker-in-Docker feature without justification | Expands attack surface; requires elevated privileges | Requires documented need + security review. |
+| Prohibited Configuration                                                       | Risk                                                      | Exception Process                                                           |
+| ------------------------------------------------------------------------------ | --------------------------------------------------------- | --------------------------------------------------------------------------- |
+| `"privileged": true`                                                           | Full host kernel access; container escape trivial         | Requires security review + written justification in PR. Must be time-boxed. |
+| `capAdd` with `SYS_ADMIN`, `NET_ADMIN`, `NET_RAW`                              | Kernel-level capabilities enable escape, network sniffing | Requires security review + written justification.                           |
+| `securityOpt: ["seccomp=unconfined"]`                                          | Disables syscall filtering entirely                       | Not permitted. No exceptions without CISO approval.                         |
+| `initializeCommand` with network calls                                         | Host-side code execution with developer credentials       | Requires security review. Prefer container-scoped commands.                 |
+| `mounts` to sensitive host paths (`/`, `/etc`, `~/.ssh`, `~/.aws`, `~/.gnupg`) | Direct access to host secrets and configuration           | Not permitted. Mount only project-specific paths.                           |
+| Secrets in `containerEnv` or `remoteEnv` literals                              | Credentials in version control                            | Not permitted. Use Codespaces Secrets or `.env` (gitignored).               |
+| `curl \| bash` in lifecycle scripts                                            | Un-auditable remote code execution                        | Vendor scripts into repo; verify checksums.                                 |
+| `runArgs: ["--network=host"]`                                                  | Bypasses container network isolation                      | Not permitted without security review.                                      |
+| Docker-in-Docker feature without justification                                 | Expands attack surface; requires elevated privileges      | Requires documented need + security review.                                 |
 
 ---
 
@@ -157,7 +160,7 @@
     // Path to Dockerfile relative to devcontainer.json location.
     "dockerfile": "Dockerfile",
     // Build context is the .devcontainer directory.
-    "context": "."
+    "context": ".",
   },
 
   // SECURITY: Run VS Code and all user processes as non-root (DC-003).
@@ -175,10 +178,7 @@
   "capAdd": [],
 
   // SECURITY: Drop all capabilities and prevent privilege escalation (DC-011).
-  "runArgs": [
-    "--cap-drop=ALL",
-    "--security-opt=no-new-privileges:true"
-  ],
+  "runArgs": ["--cap-drop=ALL", "--security-opt=no-new-privileges:true"],
 
   // SECURITY: Keep container running for interactive use.
   "overrideCommand": true,
@@ -198,13 +198,13 @@
     // Git (usually pre-installed in Node images, but ensures consistent version).
     "ghcr.io/devcontainers/features/git:1": {
       "version": "latest",
-      "ppa": false
+      "ppa": false,
     },
     // GitHub CLI for PR workflows.
     "ghcr.io/devcontainers/features/github-cli:1": {
       "installDirectlyFromGitHubRelease": true,
-      "version": "latest"
-    }
+      "version": "latest",
+    },
   },
 
   // PORTS: Explicit port forwarding for extension dev server (if applicable).
@@ -213,8 +213,8 @@
   // PORT SECURITY: Default all ports to private visibility (DC-013).
   "portsAttributes": {
     "defaults": {
-      "onAutoForward": "notify"
-    }
+      "onAutoForward": "notify",
+    },
   },
 
   // ENVIRONMENT: Static environment variables (no secrets here) (DC-006).
@@ -224,7 +224,7 @@
     "PUPPETEER_SKIP_DOWNLOAD": "true",
     "PUPPETEER_EXECUTABLE_PATH": "/usr/bin/chromium",
     // Chrome extension testing: use system Chromium.
-    "CHROME_BIN": "/usr/bin/chromium"
+    "CHROME_BIN": "/usr/bin/chromium",
   },
 
   // EXTENSIONS: Only from VS Code Marketplace (DC-014).
@@ -235,7 +235,7 @@
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
         // Chrome extension development
-        "nicedoc.vscode-chrome-ext"
+        "nicedoc.vscode-chrome-ext",
       ],
       "settings": {
         // Disable telemetry inside container.
@@ -244,17 +244,17 @@
         "typescript.tsdk": "node_modules/typescript/lib",
         // Format on save for consistency.
         "editor.formatOnSave": true,
-        "editor.defaultFormatter": "esbenp.prettier-vscode"
-      }
-    }
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+      },
+    },
   },
 
   // HOST REQUIREMENTS: Minimum resources for extension builds + Chromium.
   "hostRequirements": {
     "cpus": 2,
     "memory": "4gb",
-    "storage": "16gb"
-  }
+    "storage": "16gb",
+  },
 }
 ```
 
@@ -356,10 +356,12 @@ echo "=== Post-Create Setup Complete ==="
 ```
 
 > **Note on the Dockerfile digest:** The `sha256:REPLACE_WITH_CURRENT_DIGEST` placeholder MUST be replaced with the actual digest before use. Run:
+>
 > ```
 > docker pull node:22-bookworm-slim
 > docker inspect --format='{{index .RepoDigests 0}}' node:22-bookworm-slim
 > ```
+>
 > Then substitute the full `sha256:...` value into the FROM line.
 
 ---
@@ -368,14 +370,14 @@ echo "=== Post-Create Setup Complete ==="
 
 ### Pre-Commit Checks
 
-| Check | Tool | What It Catches |
-|-------|------|-----------------|
+| Check                               | Tool                                                                                                                                  | What It Catches                      |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | devcontainer.json schema validation | `ajv-cli` with [devcontainer schema](https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.base.schema.json) | Malformed config, invalid properties |
-| Dockerfile digest pin check | `grep -P '^FROM.*@sha256:[a-f0-9]{64}' .devcontainer/Dockerfile` | Missing digest pin on base image |
-| Root user detection | `jq '.remoteUser // "root"' .devcontainer/devcontainer.json` | Container running as root |
-| Privileged mode detection | `jq '.privileged // false' .devcontainer/devcontainer.json` | Privileged container |
-| Secret pattern scanning | `gitleaks` or `trufflehog` | Hardcoded secrets in any file |
-| Curl-pipe-bash detection | `grep -rn 'curl.*|.*bash\|curl.*|.*sh\|wget.*|.*bash' .devcontainer/` | Un-auditable remote code execution |
+| Dockerfile digest pin check         | `grep -P '^FROM.*@sha256:[a-f0-9]{64}' .devcontainer/Dockerfile`                                                                      | Missing digest pin on base image     |
+| Root user detection                 | `jq '.remoteUser // "root"' .devcontainer/devcontainer.json`                                                                          | Container running as root            |
+| Privileged mode detection           | `jq '.privileged // false' .devcontainer/devcontainer.json`                                                                           | Privileged container                 |
+| Secret pattern scanning             | `gitleaks` or `trufflehog`                                                                                                            | Hardcoded secrets in any file        |
+| Curl-pipe-bash detection            | `grep -rn 'curl.*bash\|wget.*bash' .devcontainer/`                                                                                    | Un-auditable remote code execution   |
 
 ### CI Pipeline (GitHub Actions)
 
@@ -385,8 +387,8 @@ name: DevContainer Lint
 on:
   pull_request:
     paths:
-      - '.devcontainer/**'
-      - 'package-lock.json'
+      - ".devcontainer/**"
+      - "package-lock.json"
 
 jobs:
   validate:
@@ -437,15 +439,15 @@ jobs:
 
 ### Suggested Toolchain
 
-| Purpose | Tool | Notes |
-|---------|------|-------|
-| Schema validation | `@devcontainers/cli` | Official CLI from the spec maintainers |
-| JSON parsing in CI | `jq` | Standard for JSON assertion in shell |
-| Secret scanning | `gitleaks` v8+ | Pre-commit hook + CI action |
-| Image digest updates | Renovate with `dockerfile` manager | Supports digest pinning natively |
-| Dockerfile linting | `hadolint` | Catches common Dockerfile anti-patterns |
-| Container build test | `devcontainer build` via `@devcontainers/cli` | Validates the full build pipeline |
-| Pre-commit orchestration | `pre-commit` (Python) or `husky` (Node) | Project uses Node; prefer `husky` + `lint-staged` |
+| Purpose                  | Tool                                          | Notes                                             |
+| ------------------------ | --------------------------------------------- | ------------------------------------------------- |
+| Schema validation        | `@devcontainers/cli`                          | Official CLI from the spec maintainers            |
+| JSON parsing in CI       | `jq`                                          | Standard for JSON assertion in shell              |
+| Secret scanning          | `gitleaks` v8+                                | Pre-commit hook + CI action                       |
+| Image digest updates     | Renovate with `dockerfile` manager            | Supports digest pinning natively                  |
+| Dockerfile linting       | `hadolint`                                    | Catches common Dockerfile anti-patterns           |
+| Container build test     | `devcontainer build` via `@devcontainers/cli` | Validates the full build pipeline                 |
+| Pre-commit orchestration | `pre-commit` (Python) or `husky` (Node)       | Project uses Node; prefer `husky` + `lint-staged` |
 
 ---
 
@@ -455,27 +457,27 @@ jobs:
 
 The following maps baseline requirements to NIST Secure Software Development Framework practice areas. SSDF does not prescribe specific tools; it defines outcomes. This mapping demonstrates how devcontainer controls satisfy SSDF intent.
 
-| SSDF Practice | SSDF ID | Baseline Requirement(s) | How Satisfied |
-|---------------|---------|------------------------|---------------|
-| **Protect the Software Development Environment** | PO.5 | DC-003, DC-004, DC-005, DC-011, DC-017, DC-018 | Non-root user, no privileges, capability dropping, host command restrictions, no sudo. Container isolation enforces environment boundary. |
-| **Protect All Forms of Code** | PO.3 | DC-006, DC-008, DC-009 | Secrets excluded from VCS; .devcontainer/ tracked; no un-auditable remote code execution. |
-| **Define and Use Criteria for Software Security** | PO.1 | DC-001 through DC-018 (all) | This baseline document defines minimum security criteria for development environments. |
-| **Produce Well-Secured Software** | PW.4 | DC-002, DC-007, DC-010, DC-015, DC-016 | Digest-pinned images, deterministic installs, version-pinned features, reproducible builds, automated updates. |
-| **Verify Third-Party Components** | PW.4, PS.1 | DC-010, DC-014, DC-016 | Features version-pinned; extensions from Marketplace only; automated update proposals via Renovate/Dependabot. |
-| **Respond to Vulnerabilities** | RV.1 | DC-016 | Automated tooling proposes dependency updates; digest drift is detectable in CI. |
-| **Archive and Protect Software Releases** | PO.3 | DC-008 | .devcontainer/ is version-controlled; environment definition is auditable at any commit. |
-| **Configure the Compilation/Build Environment** | PW.6 | DC-001, DC-002, DC-005, DC-007, DC-015 | Standardized build environment via container; pinned base + deterministic deps = reproducible builds. |
+| SSDF Practice                                     | SSDF ID    | Baseline Requirement(s)                        | How Satisfied                                                                                                                             |
+| ------------------------------------------------- | ---------- | ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Protect the Software Development Environment**  | PO.5       | DC-003, DC-004, DC-005, DC-011, DC-017, DC-018 | Non-root user, no privileges, capability dropping, host command restrictions, no sudo. Container isolation enforces environment boundary. |
+| **Protect All Forms of Code**                     | PO.3       | DC-006, DC-008, DC-009                         | Secrets excluded from VCS; .devcontainer/ tracked; no un-auditable remote code execution.                                                 |
+| **Define and Use Criteria for Software Security** | PO.1       | DC-001 through DC-018 (all)                    | This baseline document defines minimum security criteria for development environments.                                                    |
+| **Produce Well-Secured Software**                 | PW.4       | DC-002, DC-007, DC-010, DC-015, DC-016         | Digest-pinned images, deterministic installs, version-pinned features, reproducible builds, automated updates.                            |
+| **Verify Third-Party Components**                 | PW.4, PS.1 | DC-010, DC-014, DC-016                         | Features version-pinned; extensions from Marketplace only; automated update proposals via Renovate/Dependabot.                            |
+| **Respond to Vulnerabilities**                    | RV.1       | DC-016                                         | Automated tooling proposes dependency updates; digest drift is detectable in CI.                                                          |
+| **Archive and Protect Software Releases**         | PO.3       | DC-008                                         | .devcontainer/ is version-controlled; environment definition is auditable at any commit.                                                  |
+| **Configure the Compilation/Build Environment**   | PW.6       | DC-001, DC-002, DC-005, DC-007, DC-015         | Standardized build environment via container; pinned base + deterministic deps = reproducible builds.                                     |
 
 ### Mapping to Supply Chain Controls (SLSA / S2C2F Alignment)
 
-| Control Area | Baseline Requirement(s) | Notes |
-|-------------|------------------------|-------|
-| Source integrity | DC-008 | devcontainer files tracked in version control |
-| Build reproducibility | DC-002, DC-007, DC-010, DC-015 | Digest pinning + lockfile + version-pinned features |
-| Dependency verification | DC-007, DC-010, DC-016 | `npm ci` from lockfile; features version-pinned; automated update proposals |
-| Build environment isolation | DC-003, DC-004, DC-005, DC-011 | Non-root, unprivileged, no capabilities, no new privileges |
-| Secret management | DC-006 | Secrets never in source; injected via environment at runtime |
-| Provenance | DC-002, DC-015 | Digest-pinned base image provides verifiable provenance; build is reproducible from commit |
+| Control Area                | Baseline Requirement(s)        | Notes                                                                                      |
+| --------------------------- | ------------------------------ | ------------------------------------------------------------------------------------------ |
+| Source integrity            | DC-008                         | devcontainer files tracked in version control                                              |
+| Build reproducibility       | DC-002, DC-007, DC-010, DC-015 | Digest pinning + lockfile + version-pinned features                                        |
+| Dependency verification     | DC-007, DC-010, DC-016         | `npm ci` from lockfile; features version-pinned; automated update proposals                |
+| Build environment isolation | DC-003, DC-004, DC-005, DC-011 | Non-root, unprivileged, no capabilities, no new privileges                                 |
+| Secret management           | DC-006                         | Secrets never in source; injected via environment at runtime                               |
+| Provenance                  | DC-002, DC-015                 | Digest-pinned base image provides verifiable provenance; build is reproducible from commit |
 
 ---
 
@@ -483,35 +485,35 @@ The following maps baseline requirements to NIST Secure Software Development Fra
 
 ### Spec Ambiguities
 
-| Area | Gap | Impact | Mitigation |
-|------|-----|--------|------------|
+| Area                                      | Gap                                                                                                                                                                                                                                                                                                                                                                                                                                                        | Impact                                                                                                                              | Mitigation                                                                                                                                                                                                                                                                  |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Feature digest pinning (CRITICAL GAP)** | The dev container spec does NOT support `@sha256:` digest pinning for features. VS Code flags digest syntax as invalid ([vscode-remote-release#11241](https://github.com/microsoft/vscode-remote-release/issues/11241)). **This means feature version tags are mutable -- maintainers can rebuild and republish features under the same version tag, silently changing content.** This is a known supply chain risk with no spec-level fix as of Feb 2026. | Features may be silently updated under the same version tag. Unlike Docker images, there is no digest-based immutability guarantee. | Pin to specific patch versions (e.g., `1.7.1` not `1` or `latest`). Monitor `devcontainers/features` GitHub for updates. Periodically rebuild and test locally to detect changes. Consider vendoring critical feature install scripts into the Dockerfile for full control. |
-| **Feature merge order** | The spec states feature metadata merges with devcontainer.json, but "last source wins" for scalars lacks explicit ordering when multiple features set the same property. | A feature could silently override `remoteUser` or `privileged` settings. | Explicitly set security-critical properties in devcontainer.json (which takes precedence over feature metadata per spec). Test merged config. |
-| **`runArgs` in Codespaces** | GitHub Codespaces documentation does not explicitly state which `runArgs` are honored vs. ignored. `--cap-drop`, `--security-opt`, and `--network` may behave differently. | Security hardening via `runArgs` may not apply in Codespaces. | Test each `runArgs` entry in Codespaces. Document which are effective. Fall back to Dockerfile-level hardening where possible. |
-| **Variable substitution timing** | Spec says variables are resolved "at the time the value is applied" but does not define precise execution points. | Edge cases where `${localEnv:VAR}` resolves differently on different developer machines. | Minimize use of host-side variable substitution. Document expected host environment. |
-| **Validation failure behavior** | Spec states "it is up to the implementing tool" what happens when devcontainer.json is missing or invalid. | VS Code may silently fall back; Codespaces may fail. Behavior is not standardized. | CI validation (DC-012) catches issues before runtime. |
+| **Feature merge order**                   | The spec states feature metadata merges with devcontainer.json, but "last source wins" for scalars lacks explicit ordering when multiple features set the same property.                                                                                                                                                                                                                                                                                   | A feature could silently override `remoteUser` or `privileged` settings.                                                            | Explicitly set security-critical properties in devcontainer.json (which takes precedence over feature metadata per spec). Test merged config.                                                                                                                               |
+| **`runArgs` in Codespaces**               | GitHub Codespaces documentation does not explicitly state which `runArgs` are honored vs. ignored. `--cap-drop`, `--security-opt`, and `--network` may behave differently.                                                                                                                                                                                                                                                                                 | Security hardening via `runArgs` may not apply in Codespaces.                                                                       | Test each `runArgs` entry in Codespaces. Document which are effective. Fall back to Dockerfile-level hardening where possible.                                                                                                                                              |
+| **Variable substitution timing**          | Spec says variables are resolved "at the time the value is applied" but does not define precise execution points.                                                                                                                                                                                                                                                                                                                                          | Edge cases where `${localEnv:VAR}` resolves differently on different developer machines.                                            | Minimize use of host-side variable substitution. Document expected host environment.                                                                                                                                                                                        |
+| **Validation failure behavior**           | Spec states "it is up to the implementing tool" what happens when devcontainer.json is missing or invalid.                                                                                                                                                                                                                                                                                                                                                 | VS Code may silently fall back; Codespaces may fail. Behavior is not standardized.                                                  | CI validation (DC-012) catches issues before runtime.                                                                                                                                                                                                                       |
 
 ### Local vs. Codespaces Behavioral Differences
 
-| Behavior | Local (VS Code + Docker) | GitHub Codespaces | Risk |
-|----------|------------------------|-------------------|------|
-| `initializeCommand` | Runs on developer's host machine with full host access | Runs on Codespaces VM (ephemeral, lower risk) | Host compromise risk is higher locally |
-| Secret injection | `.env` files, Docker secrets, or manual env vars | Codespaces Secrets API (encrypted, scoped to repos) | Local secrets are harder to audit and rotate |
-| Port forwarding | Localhost only (not exposed externally) | Exposed via GitHub URL; default `private` requires auth | Codespaces ports are internet-reachable if set to `public` |
-| `runArgs` | Passed directly to Docker CLI; fully honored | Implementation-defined; may be filtered | Security hardening may silently not apply |
-| File permissions | Bind mount; host UID/GID must match (Linux) | Volume mount; managed by Codespaces | Permission errors on Linux if `updateRemoteUserUID` fails |
-| Network isolation | Container network; host Docker daemon accessible | VM-level isolation; firewall blocks inbound; no inter-codespace comms | Local Docker socket is an escape vector if mounted |
-| Extension installation | From Marketplace via VS Code | From Marketplace via Codespaces; org can restrict | Same trust model; org policies only enforceable in Codespaces |
+| Behavior               | Local (VS Code + Docker)                               | GitHub Codespaces                                                     | Risk                                                          |
+| ---------------------- | ------------------------------------------------------ | --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `initializeCommand`    | Runs on developer's host machine with full host access | Runs on Codespaces VM (ephemeral, lower risk)                         | Host compromise risk is higher locally                        |
+| Secret injection       | `.env` files, Docker secrets, or manual env vars       | Codespaces Secrets API (encrypted, scoped to repos)                   | Local secrets are harder to audit and rotate                  |
+| Port forwarding        | Localhost only (not exposed externally)                | Exposed via GitHub URL; default `private` requires auth               | Codespaces ports are internet-reachable if set to `public`    |
+| `runArgs`              | Passed directly to Docker CLI; fully honored           | Implementation-defined; may be filtered                               | Security hardening may silently not apply                     |
+| File permissions       | Bind mount; host UID/GID must match (Linux)            | Volume mount; managed by Codespaces                                   | Permission errors on Linux if `updateRemoteUserUID` fails     |
+| Network isolation      | Container network; host Docker daemon accessible       | VM-level isolation; firewall blocks inbound; no inter-codespace comms | Local Docker socket is an escape vector if mounted            |
+| Extension installation | From Marketplace via VS Code                           | From Marketplace via Codespaces; org can restrict                     | Same trust model; org policies only enforceable in Codespaces |
 
 ### Feature Security Posture Unknowns
 
-| Unknown | Detail | Recommendation |
-|---------|--------|----------------|
-| **Feature provenance** | Community features (`ghcr.io/user/feature`) have no formal review process. Even official features are not signed. | Use only features from `ghcr.io/devcontainers/features/` (spec maintainers). Vet community features before adoption. |
-| **Feature update cadence** | No SLA for security patches on features. Community features may be abandoned. | Monitor feature repos for activity. Have a fallback plan (inline the feature's install script into Dockerfile). |
-| **Feature runtime behavior** | Features can modify the container image in arbitrary ways (install packages, add users, change permissions). The spec does not constrain what a feature's `install.sh` can do. | Review feature source before adoption. Pin to versions you have audited. |
-| **Feature interaction** | Multiple features may conflict (e.g., two features installing different Node.js versions). The spec provides `overrideFeatureInstallOrder` but no conflict detection. | Minimize feature count. Test the full feature set together. Document expected tool versions in `post-create.sh` output. |
-| **SBOM for features** | No standardized SBOM generation for installed features. The packages a feature installs are not tracked. | Generate SBOM post-build using `syft` or `trivy` if supply chain evidence is required. |
+| Unknown                      | Detail                                                                                                                                                                         | Recommendation                                                                                                          |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| **Feature provenance**       | Community features (`ghcr.io/user/feature`) have no formal review process. Even official features are not signed.                                                              | Use only features from `ghcr.io/devcontainers/features/` (spec maintainers). Vet community features before adoption.    |
+| **Feature update cadence**   | No SLA for security patches on features. Community features may be abandoned.                                                                                                  | Monitor feature repos for activity. Have a fallback plan (inline the feature's install script into Dockerfile).         |
+| **Feature runtime behavior** | Features can modify the container image in arbitrary ways (install packages, add users, change permissions). The spec does not constrain what a feature's `install.sh` can do. | Review feature source before adoption. Pin to versions you have audited.                                                |
+| **Feature interaction**      | Multiple features may conflict (e.g., two features installing different Node.js versions). The spec provides `overrideFeatureInstallOrder` but no conflict detection.          | Minimize feature count. Test the full feature set together. Document expected tool versions in `post-create.sh` output. |
+| **SBOM for features**        | No standardized SBOM generation for installed features. The packages a feature installs are not tracked.                                                                       | Generate SBOM post-build using `syft` or `trivy` if supply chain evidence is required.                                  |
 
 ---
 

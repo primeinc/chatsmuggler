@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Project
 
 **ChatSmuggler** — Browser extension to export conversations from ChatGPT, Gemini, Grok, Claude, and DeepSeek.
-Tagline: *"Your chats. Smuggled out."*
+Tagline: _"Your chats. Smuggled out."_
 
 - **Repo**: `primeinc/chatsmuggler` (private)
 - **License**: MIT
@@ -33,30 +33,44 @@ src/
 
 ## Toolchain
 
-| Tool | Purpose | Config |
-|---|---|---|
-| TypeScript | Language | `tsconfig.json` — strictest viable config |
-| Vite | Build | Extension bundling with HMR |
-| ESLint | Linting + SAST | Flat config, `@microsoft/eslint-plugin-sdl` + `eslint-plugin-security` + `eslint-plugin-no-secrets` |
-| Prettier | Formatting | `tabWidth: 2`, `trailingComma: "all"` |
-| Husky + lint-staged | Pre-commit | Lint + format staged files |
-| Vitest | Testing | Unit + integration tests |
-| GitHub Actions | CI/CD | Lint, typecheck, test, build, security scan |
+| Tool                | Purpose         | Config                                                                                              |
+| ------------------- | --------------- | --------------------------------------------------------------------------------------------------- |
+| TypeScript          | Language        | `tsconfig.json` — strictest viable config                                                           |
+| Vite                | Build           | Explicit multi-entry Rollup config, no CRXJS, no WXT                                                |
+| ESLint              | Linting + SAST  | Flat config, `@microsoft/eslint-plugin-sdl` + `eslint-plugin-security` + `eslint-plugin-no-secrets` |
+| Prettier            | Formatting      | `tabWidth: 2`, `trailingComma: "all"`                                                               |
+| Husky + lint-staged | Pre-commit      | Lint + format staged files                                                                          |
+| Vitest              | Testing         | Unit + integration tests                                                                            |
+| GitHub Actions      | CI/CD           | Lint, typecheck, test, build, attest, security scan                                                 |
+| pnpm                | Package manager | Pinned via `packageManager` + corepack; `frozen-lockfile` always                                    |
+
+## Package Manager
+
+**pnpm only.** `package-lock.json` and `yarn.lock` must never exist. Enforced via `.gitignore`.
+
+- Pin via `"packageManager": "pnpm@10.22.0"` in `package.json`
+- Enable via `corepack enable` (Node 16.9+)
+- CI must always use `pnpm install --frozen-lockfile`
+- Never run `npm install` or `yarn install` anywhere, ever
+
+Rationale: deterministic lockfile, content-addressable store, strict peer dep resolution, better
+supply chain auditability than npm ranges. SDL Practice 5 (supply chain security).
 
 ## Commands
 
 ```bash
-npm ci                    # Install (locked deps, CI-safe)
-npm run dev               # Dev build with HMR
-npm run build             # Production build
-npm run lint              # ESLint (zero warnings allowed)
-npm run lint:fix          # ESLint with auto-fix
-npm run typecheck         # tsc --noEmit
-npm run test              # Vitest
-npm run test:watch        # Vitest in watch mode
-npm run format            # Prettier write
-npm run format:check      # Prettier check (CI)
-npm run audit             # npm audit --audit-level=high
+pnpm install              # Install (uses frozen-lockfile from .npmrc)
+pnpm run dev              # Vite build in watch mode (no dev server/HMR)
+pnpm run build            # Production build
+pnpm run attest           # Artifact attestation (runs after build)
+pnpm run lint             # ESLint (zero warnings allowed)
+pnpm run lint:fix         # ESLint with auto-fix
+pnpm run typecheck        # tsc --noEmit
+pnpm run test             # Vitest
+pnpm run test:watch       # Vitest in watch mode
+pnpm run format           # Prettier write
+pnpm run format:check     # Prettier check (CI)
+pnpm run audit            # pnpm audit --audit-level=high
 ```
 
 ## TypeScript Config (Strict AF)
@@ -81,6 +95,7 @@ Three security plugins are MANDATORY per Microsoft SDL:
 3. **`eslint-plugin-no-secrets`** — entropy-based secret detection in source
 
 Additionally:
+
 - `@typescript-eslint` strict + stylistic presets
 - `no-floating-promises: error` — only 3/25 reference repos enable this, but it's critical
 - `no-misused-promises: error` — prevents async footguns
@@ -96,12 +111,13 @@ Additionally:
 - **Validate all `chrome.runtime.onMessage` inputs** — treat all messages as untrusted.
 - **Minimal permissions** — justify every permission in `docs/security/permissions-justification.md`.
 - **Pin all GitHub Actions to SHA** — never use tags (CVE-2025-30066 precedent).
-- **`npm ci` only** — never `npm install` in CI.
+- **`pnpm install --frozen-lockfile` only** — never `npm install`, `yarn install`, or `pnpm install` without `--frozen-lockfile` in CI.
 - All config decisions are logged with reasoning in `docs/research/`.
 
 ## Security Posture
 
 Targets Microsoft SDL compliance. See:
+
 - `docs/research/microsoft-sdl-requirements.md` — SDL practices mapped to tooling
 - `docs/research/microsoft-sdl-audit-baseline.md` — audit-ready baseline with citations
 - `docs/research/config-analysis.md` — analysis of 25 reference repos

@@ -1,0 +1,74 @@
+{
+  "manifest_version": 3,
+  "name": "ChatSmuggler",
+  "short_name": "ChatSmuggler",
+  "description": "Export conversations from ChatGPT, Gemini, Grok, Claude, and DeepSeek.",
+  "version": "0.1.0",
+
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+
+  "action": {
+    "default_popup": "popup/index.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    },
+    "default_title": "ChatSmuggler"
+  },
+
+  "background": {
+    "service_worker": "background/index.js",
+    "type": "module"
+  },
+
+  "content_scripts": [
+    {
+      "matches": ["https://chatgpt.com/*", "https://chat.openai.com/*"],
+      "js": ["adapters/chatgpt.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://gemini.google.com/*"],
+      "js": ["adapters/gemini.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://grok.com/*", "https://x.com/i/grok*"],
+      "js": ["adapters/grok.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://claude.ai/*"],
+      "js": ["adapters/claude.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://chat.deepseek.com/*"],
+      "js": ["adapters/deepseek.js"],
+      "run_at": "document_idle"
+    }
+  ],
+
+  "permissions": ["storage"],
+
+  "host_permissions": [
+    "https://chatgpt.com/*",
+    "https://chat.openai.com/*",
+    "https://gemini.google.com/*",
+    "https://grok.com/*",
+    "https://x.com/i/grok*",
+    "https://claude.ai/*",
+    "https://chat.deepseek.com/*"
+  ],
+
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none';"
+  }
+}
