@@ -54,6 +54,9 @@
     ]
   },
   "pnpm": {
-    "onlyBuiltDependencies": []
+    "onlyBuiltDependencies": [],
+    "overrides": {
+      "minimatch": "^10.2.1"
+    }
   }
 }
