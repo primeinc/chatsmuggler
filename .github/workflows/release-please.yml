@@ -7,6 +7,8 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  id-token: write
+  attestations: write
 
 jobs:
   release-please:
@@ -16,4 +18,3 @@ jobs:
         with:
           release-type: node
           path: .
-          default-branch: main
