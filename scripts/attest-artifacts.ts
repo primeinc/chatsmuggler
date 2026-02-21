@@ -109,7 +109,7 @@ async function listFilesRec(dir: string): Promise<string[]> {
 
 /** Convert absolute dist path to a posix-normalized relative path (dist-relative). */
 function toDistRel(absPath: string): string {
-  return absPath.slice(DIST.length + 1).replaceAll("\\", "/");
+  return absPath.slice(DIST.length + 1).replace(/\\/g, "/");
 }
 
 async function sha256(absPath: string): Promise<string> {
