@@ -15,6 +15,5 @@ jobs:
       - uses: googleapis/release-please-action@c3fc4de07084f75a2b61a5b933069bda6edf3d5c
         with:
           release-type: node
-          package-name: chatsmuggler
-          pull-request-title-pattern: "chore(release): ${version}"
-          include-v-in-tag: true
+          path: .
+          default-branch: main
