@@ -371,13 +371,13 @@ echo "=== Post-Create Setup Complete ==="
 ### Pre-Commit Checks
 
 | Check                               | Tool                                                                                                                                  | What It Catches                      |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------------ | ------------------------ | ---------------------------------- |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
 | devcontainer.json schema validation | `ajv-cli` with [devcontainer schema](https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainer.base.schema.json) | Malformed config, invalid properties |
 | Dockerfile digest pin check         | `grep -P '^FROM.*@sha256:[a-f0-9]{64}' .devcontainer/Dockerfile`                                                                      | Missing digest pin on base image     |
 | Root user detection                 | `jq '.remoteUser // "root"' .devcontainer/devcontainer.json`                                                                          | Container running as root            |
 | Privileged mode detection           | `jq '.privileged // false' .devcontainer/devcontainer.json`                                                                           | Privileged container                 |
 | Secret pattern scanning             | `gitleaks` or `trufflehog`                                                                                                            | Hardcoded secrets in any file        |
-| Curl-pipe-bash detection            | `grep -rn 'curl.\*                                                                                                                    | ._bash\|curl._                       | ._sh\|wget._ | .\*bash' .devcontainer/` | Un-auditable remote code execution |
+| Curl-pipe-bash detection            | `grep -rn 'curl.*bash\|wget.*bash' .devcontainer/`                                                                                    | Un-auditable remote code execution   |
 
 ### CI Pipeline (GitHub Actions)
 

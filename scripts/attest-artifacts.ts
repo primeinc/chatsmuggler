@@ -13,7 +13,7 @@
 */
 import { createHash } from "node:crypto";
 import { readFile, readdir, stat } from "node:fs/promises";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -138,7 +138,8 @@ async function main(): Promise<void> {
   }
 
   // ── 2. Collect required dist paths from manifest ──────────────────────────
-  const required: string[] = [];
+  // Also require dist/manifest.json itself — Chrome cannot load an extension without it.
+  const required: string[] = ["manifest.json"];
 
   const sw = manifest.background?.service_worker;
   if (!sw) die("manifest.background.service_worker is missing — MV3 requires a service worker");
@@ -156,9 +157,18 @@ async function main(): Promise<void> {
 
   const requiredNorm = uniq(required.map((p) => p.replace(/^\.\//, "")));
 
-  // ── 3. Verify every required artifact exists ──────────────────────────────
+  // ── 3. Verify every required artifact exists (with path traversal guard) ──
   for (const rel of requiredNorm) {
+    // Guard: reject absolute paths or any path that escapes dist/ after normalization.
+    if (rel.startsWith("/") || rel.startsWith("\\") || rel.includes("..")) {
+      die(`Manifest path "${rel}" is absolute or attempts directory traversal — rejecting`);
+    }
     const abs = resolve(DIST, rel);
+    // Double-check resolved path is still inside DIST using relative() — works cross-platform.
+    const rel2 = relative(DIST, abs);
+    if (rel2.startsWith("..") || resolve(DIST, rel2) !== abs) {
+      die(`Manifest path "${rel}" resolves outside dist/ — possible path traversal`);
+    }
     const exists = await stat(abs)
       .then(() => true)
       .catch(() => false);

@@ -1,3 +1,4 @@
+import { copyFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Plugin } from "vite";
 import { defineConfig } from "vite";
@@ -11,6 +12,23 @@ const src = (p: string) => resolve(__dirname, "src", p);
  * Without this: dist/src/popup/index.html (wrong — manifest references popup/index.html)
  * With this:    dist/popup/index.html      (correct)
  */
+/**
+ * Copy manifest.json from project root to dist/ after every build.
+ * The manifest is the security contract — it must ship with the extension.
+ */
+function copyManifest(): Plugin {
+  return {
+    name: "chatsmuggler:copy-manifest",
+    enforce: "post",
+    async closeBundle() {
+      await copyFile(
+        resolve(__dirname, "manifest.json"),
+        resolve(__dirname, "dist", "manifest.json"),
+      );
+    },
+  };
+}
+
 function rewriteHtmlOutputPaths(): Plugin {
   return {
     name: "chatsmuggler:rewrite-html-output-paths",
@@ -28,7 +46,7 @@ function rewriteHtmlOutputPaths(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [rewriteHtmlOutputPaths()],
+  plugins: [copyManifest(), rewriteHtmlOutputPaths()],
   build: {
     outDir: "dist",
     emptyOutDir: true,

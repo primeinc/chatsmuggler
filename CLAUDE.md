@@ -60,7 +60,7 @@ supply chain auditability than npm ranges. SDL Practice 5 (supply chain security
 
 ```bash
 pnpm install              # Install (uses frozen-lockfile from .npmrc)
-pnpm run dev              # Dev build with HMR
+pnpm run dev              # Vite build in watch mode (no dev server/HMR)
 pnpm run build            # Production build
 pnpm run attest           # Artifact attestation (runs after build)
 pnpm run lint             # ESLint (zero warnings allowed)
