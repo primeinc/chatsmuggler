@@ -19,7 +19,11 @@ jobs:
         uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238
         with:
           node-version: 22.22.0
-          pnpm-version: "10.22.0"
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@c5ba7f7862a0f64c1b1a05fbac13e0b8e86ba08c
+        with:
+          version: 10.22.0
 
       - name: Install
         run: pnpm install --frozen-lockfile
